@@ -1,50 +1,101 @@
 package main
 
 import (
+	proto "DSMandatoryActivity3TIM/gRPC"
 	"context"
-	proto "everywere/DSMandatoryActivity3TIM/gRPC"
+	"fmt"
+	"sync"
 	"log"
 	"net"
-
 	"google.golang.org/grpc"
 )
-
-type ChittyChatServer struct {
+//Heavily inspired by https://medium.com/@bhadange.atharv/building-a-real-time-chat-application-with-grpc-and-go-aa226937ad3c
+type Connection struct {
 	proto.UnimplementedChittyChatServer
-	chatMessages []*proto.ChatMessage
+	stream proto.ChittyChat_CreateStreamServer
+	name string
+	active bool
+	error  chan error
 }
 
-func (s *ChittyChatServer) GetChatMessages(ctx context.Context, in *proto.Empty) (*proto.ChatMessages, error) {
-	return &proto.ChatMessages{ChatMessages: s.chatMessages}, nil
-}
-func (s *ChittyChatServer) PostMessage(ctx context.Context, in *proto.ChatMessage) (*proto.Respons, error) {
-	
-	
-	server.chatMessages = append(server.chatMessages,  )
-	
-	return , nil
-}
+type Pool struct {
+	proto.UnimplementedChittyChatServer
+	Connection []*Connection
+ }
 
-func main() {
-	server := &ChittyChatServer{chatMessages: []*proto.ChatMessage{}}
 
-	server.start_server()
-
-}
-
-func (s *ChittyChatServer) start_server() {
-	grpcServer := grpc.NewServer()
-	listener, err := net.Listen("tcp", ":5050")
-	if err != nil {
-		log.Fatalf("Server Error")
+func (p *Pool) CreateStream(pconn *proto.Connect, stream proto.ChittyChat_CreateStreamServer) error {
+	conn := &Connection{
+		stream: stream,
+		name: pconn.User.Name,
+		active: true,
+		error:  make(chan error),
 	}
-
-	proto.RegisterChittyChatServer(grpcServer, s)
-
-	err = grpcServer.Serve(listener)
-
-	if err != nil {
-		log.Fatalf("Server Error")
-	}
-
+   
+	p.Connection = append(p.Connection, conn)
+	
+	return <-conn.error
 }
+
+func (s *Pool) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto.Close, error) {
+	wait := sync.WaitGroup{}
+	done := make(chan int)
+   
+	for _, conn := range s.Connection {
+	 wait.Add(1)
+   
+	 go func(msg *proto.Message, conn *Connection) {
+	  defer wait.Done()
+   
+	  if conn.active {
+	   err := conn.stream.Send(msg)
+	   fmt.Printf("Sending message to: %v from %v", conn.name, msg.Id) // update this
+   
+	   if err != nil {
+		fmt.Printf("Error with Stream: %v - Error: %v\n", conn.stream, err)
+		conn.active = false
+		conn.error <- err
+	   }
+	  }
+	 }(msg, conn)
+   
+	}
+   
+	go func() {
+	 wait.Wait()
+	 close(done)
+	}()
+   
+	<-done
+	return &proto.Close{}, nil
+   }
+
+
+   func main() {
+		// Create a new gRPC server
+		grpcServer := grpc.NewServer()
+	
+		// Create a new connection pool
+		var conn []*Connection
+	
+		pool := &Pool{
+		Connection: conn,
+		}
+	
+		// Register the pool with the gRPC server
+		proto.RegisterChittyChatServer(grpcServer, pool)
+	
+		// Create a TCP listener at port 8080
+		listener, err := net.Listen("tcp", ":8080")
+	
+		if err != nil {
+		log.Fatalf("Error creating the server %v", err)
+		}
+	
+		fmt.Println("Server started at port :8080")
+	
+		// Start serving requests at port 8080
+		if err := grpcServer.Serve(listener); err != nil {
+		log.Fatalf("Error creating the server %v", err)
+		}
+   }

@@ -1,26 +1,28 @@
 syntax = "proto3";
-option go_package = "DSMandatoryActivity3TIM/gRPC/proto";
+package ChittyChat;
 
-message ChatMessages {
-    repeated ChatMessage chatMessages = 1;
-}
-message ChatMessage {
-    string message = 1;
-    string timestamp = 2;
-}
+option go_package = "DSMandatoryActivity3TIM/gRPC";
 
-message Empty {}
-
-message Respons{
-    bool Succes = 1;
-    string message = 2;
+//Heavily inspired by https://medium.com/@bhadange.atharv/building-a-real-time-chat-application-with-grpc-and-go-aa226937ad3c
+message User {
+    string name = 1;
 }
 
+message Message {
+    string id = 1;
+    User user = 2;
+    string message = 3;
+    int32 timestamp = 4;
+}
+
+message Connect {
+    User user = 1;
+    bool active = 2;
+}
+
+message Close{}
 
 service ChittyChat {
-    rpc GetChatMessages (Empty) returns (stream ChatMessages) {};
-    rpc PostMessage (ChatMessage) returns (Respons);
+    rpc CreateStream(Connect) returns (stream Message);
+    rpc BroadcastMessage(Message) returns (Close);
 }
-
-
-//protoc --go_out=. --go_opt=paths=source_relative \ --go-grpc_out=. --go-grpc_opt=paths=source_relative \ gRPC/Proto.proto  

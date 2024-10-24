@@ -4,7 +4,7 @@
 package main
 
 import (
-	proto "everywere/DSMandatoryActivity3TIM/gRPC"
+	proto "DSMandatoryActivity3TIM/gRPC"
 	"context"
 	"log"
 
