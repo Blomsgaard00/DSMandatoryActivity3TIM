@@ -4,25 +4,22 @@ package ChittyChat;
 option go_package = "DSMandatoryActivity3TIM/gRPC";
 
 //Heavily inspired by https://medium.com/@bhadange.atharv/building-a-real-time-chat-application-with-grpc-and-go-aa226937ad3c
-message User {
-    string name = 1;
-}
 
 message Message {
-    string id = 1;
-    User user = 2;
-    string message = 3;
-    int32 timestamp = 4;
+    int32 id = 1;
+    string message = 2;
+    int32 timestamp = 3;
 }
 
 message Connect {
-    User user = 1;
-    bool active = 2;
+    bool active = 1;
+    int32 timestamp = 2;
 }
 
 message Close{}
 
 service ChittyChat {
+    
     rpc CreateStream(Connect) returns (stream Message);
     rpc BroadcastMessage(Message) returns (Close);
 }

@@ -19,8 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChittyChat_CreateStream_FullMethodName     = "/ChittyChat/CreateStream"
-	ChittyChat_BroadcastMessage_FullMethodName = "/ChittyChat/BroadcastMessage"
+	ChittyChat_CreateStream_FullMethodName     = "/ChittyChat.ChittyChat/CreateStream"
+	ChittyChat_BroadcastMessage_FullMethodName = "/ChittyChat.ChittyChat/BroadcastMessage"
 )
 
 // ChittyChatClient is the client API for ChittyChat service.
@@ -144,7 +144,7 @@ func _ChittyChat_BroadcastMessage_Handler(srv interface{}, ctx context.Context, 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChittyChat_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ChittyChat",
+	ServiceName: "ChittyChat.ChittyChat",
 	HandlerType: (*ChittyChatServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
