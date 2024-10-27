@@ -18,7 +18,6 @@ message Connect {
 message Close{}
 
 service ChittyChat {
-    
     rpc CreateStream(Connect) returns (stream Message);
     rpc BroadcastMessage(Message) returns (Close);
 }

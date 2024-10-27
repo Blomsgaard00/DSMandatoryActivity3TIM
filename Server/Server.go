@@ -31,7 +31,6 @@ func (p *Pool) CreateStream(pconn *proto.Connect, stream proto.ChittyChat_Create
 	if pconn.Timestamp > p.serverTimestamp {
 		p.serverTimestamp = pconn.Timestamp
 	}
-	p.serverTimestamp++
 	ClientID := p.clientCount
 	conn := &Connection{
 		stream: stream,
@@ -41,15 +40,19 @@ func (p *Pool) CreateStream(pconn *proto.Connect, stream proto.ChittyChat_Create
 	p.serverTimestamp++
 
 	initialConnectMessage := &proto.Message{
-		Id:        ClientID,
-		Message:   "Participant " + fmt.Sprint(ClientID) + " joined Chitty-Chat at Lamport time " + fmt.Sprint(p.serverTimestamp),
+		Message:   "Participant " + fmt.Sprint(ClientID) + " joined Chitty-Chat",
 		Timestamp: p.serverTimestamp,
 	}
-
+	log.Println("p.BroadcastMessage(context.Background(), initialConnectMessage)")
 	p.BroadcastMessage(context.Background(), initialConnectMessage)
 
 	p.Connection = append(p.Connection, conn)
 
+	<-conn.stream.Context().Done()
+	p.serverTimestamp++
+	conn.active = false
+	log.Println("Lamport timestamp: " + fmt.Sprint(p.serverTimestamp) + " Participant " + fmt.Sprint(ClientID) + " has left the server")
+	
 	return <-conn.error
 }
 
@@ -57,7 +60,14 @@ func (s *Pool) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto
 	wait := sync.WaitGroup{}
 	done := make(chan int)
 
-	fmt.Println(msg.Message)
+	if s.serverTimestamp > msg.Timestamp {
+		msg.Timestamp = s.serverTimestamp
+	} else if msg.Timestamp > s.serverTimestamp {
+		s.serverTimestamp = msg.Timestamp
+	}
+	s.serverTimestamp++
+
+	log.Println("Lamport timestamp: " + fmt.Sprint(s.serverTimestamp) + ", Message: " + msg.Message)
 	for _, conn := range s.Connection {
 		wait.Add(1)
 
@@ -68,7 +78,7 @@ func (s *Pool) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto
 				err := conn.stream.Send(msg)
 
 				if err != nil {
-					fmt.Printf("Error with Stream: %v - Error: %v\n", conn.stream, err)
+					log.Printf("Error with Stream: %v - Error: %v\n", conn.stream, err)
 					conn.active = false
 					conn.error <- err
 				}
@@ -106,7 +116,7 @@ func main() {
 		log.Fatalf("Error creating the server %v", err)
 	}
 
-	fmt.Println("Server started at port :5100")
+	log.Println("Server started at port :5100")
 
 	// Start serving requests at port 8080
 	if err := grpcServer.Serve(listener); err != nil {
