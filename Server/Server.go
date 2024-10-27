@@ -43,7 +43,7 @@ func (p *Pool) CreateStream(pconn *proto.Connect, stream proto.ChittyChat_Create
 		Message:   "Participant " + fmt.Sprint(ClientID) + " joined Chitty-Chat",
 		Timestamp: p.serverTimestamp,
 	}
-	log.Println("p.BroadcastMessage(context.Background(), initialConnectMessage)")
+	
 	p.BroadcastMessage(context.Background(), initialConnectMessage)
 
 	p.Connection = append(p.Connection, conn)
@@ -51,7 +51,12 @@ func (p *Pool) CreateStream(pconn *proto.Connect, stream proto.ChittyChat_Create
 	<-conn.stream.Context().Done()
 	p.serverTimestamp++
 	conn.active = false
-	log.Println("Lamport timestamp: " + fmt.Sprint(p.serverTimestamp) + " Participant " + fmt.Sprint(ClientID) + " has left the server")
+	clientShutdownMessage := &proto.Message{
+		Message:   "Participant " + fmt.Sprint(ClientID) + " has left the server",
+		Timestamp: p.serverTimestamp,
+	}
+
+	p.BroadcastMessage(context.Background(), clientShutdownMessage)
 	
 	return <-conn.error
 }
@@ -66,8 +71,8 @@ func (s *Pool) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto
 		s.serverTimestamp = msg.Timestamp
 	}
 	s.serverTimestamp++
-
-	log.Println("Lamport timestamp: " + fmt.Sprint(s.serverTimestamp) + ", Message: " + msg.Message)
+	log.Println("Lamport timestamp: " + fmt.Sprint(s.serverTimestamp) + ", Server recieved message: " + msg.Message)
+	s.serverTimestamp++
 	for _, conn := range s.Connection {
 		wait.Add(1)
 

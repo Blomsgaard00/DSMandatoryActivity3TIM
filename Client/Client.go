@@ -61,6 +61,7 @@ func receiveMessage(stream grpc.ServerStreamingClient[proto.Message]) {
 			timestamp = input.Timestamp
 		}
 		log.Println("Lamport timestamp: " + fmt.Sprint(timestamp) + ", Message: " + input.Message)
+
 	}
 }
 
