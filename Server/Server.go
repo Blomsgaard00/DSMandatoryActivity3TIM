@@ -38,11 +38,11 @@ func (p *Pool) CreateStream(pconn *proto.Connect, stream proto.ChittyChat_Create
 		active: true,
 		error:  make(chan error),
 	}
-
 	p.serverTimestamp++
+
 	initialConnectMessage := &proto.Message{
 		Id:        ClientID,
-		Message:   "message",
+		Message:   "Participant " + fmt.Sprint(ClientID) + " joined Chitty-Chat at Lamport time " + fmt.Sprint(p.serverTimestamp),
 		Timestamp: p.serverTimestamp,
 	}
 
@@ -57,6 +57,7 @@ func (s *Pool) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto
 	wait := sync.WaitGroup{}
 	done := make(chan int)
 
+	fmt.Println(msg.Message)
 	for _, conn := range s.Connection {
 		wait.Add(1)
 
@@ -65,7 +66,6 @@ func (s *Pool) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto
 
 			if conn.active {
 				err := conn.stream.Send(msg)
-				fmt.Printf("Connection message") // update this
 
 				if err != nil {
 					fmt.Printf("Error with Stream: %v - Error: %v\n", conn.stream, err)
@@ -74,7 +74,6 @@ func (s *Pool) BroadcastMessage(ctx context.Context, msg *proto.Message) (*proto
 				}
 			}
 		}(msg, conn)
-
 	}
 
 	go func() {
